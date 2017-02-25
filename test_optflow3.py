@@ -4,13 +4,13 @@ import math
 import random
 cap = cv2.VideoCapture('simul.MOV')
 # params for ShiTomasi corner detection
-feature_params = dict( maxCorners = 40,
-                       qualityLevel = 0.1,
-                       minDistance = 200,
-                       blockSize = 30 )
+feature_params = dict( maxCorners = 500,
+                       qualityLevel = 0.01,
+                       minDistance = 80,
+                       blockSize = 10 )
 # Parameters for lucas kanade optical flow
 lk_params = dict( winSize  = (30,30),
-                  maxLevel = 3,
+                  maxLevel = 2,
                   criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
 # Create some random colors
 color = np.random.randint(0,255,(100,3))
@@ -41,7 +41,6 @@ while(1):
     tuple_new_pts = new_pts.shape
     tuple_p0 = p0.shape
     #print st
-    #p0 = np.concatenate((p0,new_pts), axis=0)
     print "Points being Tracked"
     print p0
     p1, st, err = cv2.calcOpticalFlowPyrLK(old_gray, frame_gray, p0, None, **lk_params)
@@ -49,27 +48,25 @@ while(1):
     good_new = p1[st==1]
     good_old = p0[st==1]
     # draw the tracks
-    count = 0
-    total_distance = 0
-    points_to_remove_list = list()
     if good_old.shape[0] != 0:
         for i,(new,old) in enumerate(zip(good_new,good_old)):
             a,b = new.ravel()
             c,d = old.ravel()
-            count = count + 1
-            distance = math.sqrt( (a-c)*(a-c) + (b-d)*(b-d))
-            total_distance = distance + total_distance
-
-            if avg_distance != 0 and distance < avg_distance*0.1:
-                points_to_remove_list.append(i)
             mask = cv2.line(mask, (a,b),(c,d), color[i].tolist(), 2)
             frame = cv2.circle(frame,(a,b),5,color[i].tolist(),-1)
+
+
+    else:
+        print "no new points no no"
+        p0 = cv2.goodFeaturesToTrack(frame_gray, mask = None, **feature_params)
+        cv2.imshow('frame', frame)
+        print "looking for new points"
+        continue
 
     frame = cv2.circle(frame, (int(width),0), 10, color[0].tolist(), -1)
     frame = cv2.circle(frame, (int(width), int(height)), 10, color[0].tolist(), -1)
     frame = cv2.circle(frame, (0, int(height)), 10, color[0].tolist(), -1)
     frame = cv2.circle(frame, (0,0), 10, color[0].tolist(), -1)
-    avg_distance = total_distance/count
     img = cv2.add(frame,mask)
     cv2.imshow('frame',img)
     k = cv2.waitKey(30) & 0xff
@@ -95,13 +92,6 @@ while(1):
             count_things_exited_on_bottom =+ 1
         print "we on point"
 
-    if len(points_to_remove_list) > 0:
-        good_new = np.delete(arr=good_new, obj=points_to_remove_list, axis=0)
-        rand_indexes_to_add = [random.uniform(0,new_pts.shape[0]) for _ in xrange(len(
-            points_to_remove_list))]
-        for index in rand_indexes_to_add:
-            column_to_add = new_pts[int(index),0].reshape(1,2)
-            good_new = np.concatenate((column_to_add, good_new), axis = 0)
     print "wayymeent"
     print "wayyment"
     p0 = good_new.reshape(-1,1,2)
