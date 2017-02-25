@@ -2,12 +2,12 @@ import numpy as np
 import cv2
 import math
 import random
-import
-cap = cv2.VideoCapture('simul.MOV')
+import time
+cap = cv2.VideoCapture('car3.mov')
 # params for ShiTomasi corner detection
-feature_params = dict( maxCorners = 500,
+feature_params = dict( maxCorners = 5,
                        qualityLevel = 0.01,
-                       minDistance = 80,
+                       minDistance = 30,
                        blockSize = 10 )
 # Parameters for lucas kanade optical flow
 lk_params = dict( winSize  = (30,30),
@@ -31,6 +31,7 @@ count_things_exited_on_top = 0
 last_exit_on_top = 0
 count_things_exited_on_bottom = 0
 last_exit_on_bottom = 0
+exit_threshold = .5
 
 avg_distance = 0
 
@@ -46,8 +47,6 @@ while(1):
     tuple_new_pts = new_pts.shape
     tuple_p0 = p0.shape
     #print st
-    print "Points being Tracked"
-    print p0
     p1, st, err = cv2.calcOpticalFlowPyrLK(old_gray, frame_gray, p0, None, **lk_params)
     # Select good points
     good_new = p1[st==1]
@@ -80,7 +79,7 @@ while(1):
 
 
         frame = cv2.circle(frame, (int(width),0), 10, color[0].tolist(), -1)
-        frame = cv2.circle(frame, (int(width), int(height)), 10, color[0].tolist(), -1)
+        #frame = cv2.circle(frame, (int(width), int(height)), 10, color[0].tolist(), -1)
         frame = cv2.circle(frame, (0, int(height)), 10, color[0].tolist(), -1)
         frame = cv2.circle(frame, (0,0), 10, color[0].tolist(), -1)
         img = cv2.add(frame,mask)
@@ -93,19 +92,23 @@ while(1):
         for point in new_pts:
             x = point[0][0]
             y = point[0][1]
-            if (width - x) == 1:
+            current_time = time.time()
+            if (width - x) < 5 and (current_time - last_exit_on_right) > exit_threshold:
                 count_things_exited_on_right += 1
+                last_exit_on_right = current_time
                 print "exit on the right " + str(count_things_exited_on_right)
-            elif x ==  1:
+            elif x < 5 and (current_time - last_exit_on_left) > exit_threshold:
                 count_things_exited_on_left += 1
+                last_exit_on_left = current_time
                 print "exit on the left " + str(count_things_exited_on_left)
-            if (height - y) == 1:
+            if y < 5 and (current_time - last_exit_on_top) > exit_threshold:
                 count_things_exited_on_top += 1
+                last_exit_on_top = current_time
                 print "exit on the top " + str(count_things_exited_on_top)
-            elif y == 1:
+            elif (height - y) < 5 and (current_time - last_exit_on_bottom) > exit_threshold:
+                last_exit_on_bottom = current_time
                 count_things_exited_on_bottom += 1
                 print "exit on the bottom " + str(count_things_exited_on_bottom)
-            print "we on point"
 
         print "wayymeent"
         print "wayyment"
